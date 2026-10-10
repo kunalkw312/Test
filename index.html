@@ -15,19 +15,13 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <!-- Header -->
     <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
         <img src="https://res.cloudinary.com/dowhvdkjh/image/upload/v1782474012/OptenixWhite-rPCfLtKB_gehbfb.png" alt="Optenix Logo" class="h-8">
         <div class="text-slate-300 font-medium">Admin Dashboard | Live Submissions</div>
     </header>
 
-    <!-- Main Container -->
     <main class="flex-grow p-6 max-w-7xl mx-auto w-full">
-        
-        <!-- Live Submissions Table -->
         <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
-            
-            <!-- Controls Top Bar -->
             <div class="p-6 border-b border-slate-700 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-slate-800/50">
                 <h2 class="text-xl font-bold text-white flex items-center whitespace-nowrap">
                     <span class="w-3 h-3 bg-red-500 rounded-full mr-3 animate-pulse"></span>
@@ -35,7 +29,6 @@
                 </h2>
                 
                 <div class="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
-                    <!-- Search Bar -->
                     <div class="relative w-full md:w-64">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -43,7 +36,6 @@
                         <input type="text" id="searchInput" onkeyup="applyFiltersAndRender()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition" placeholder="Search name...">
                     </div>
 
-                    <!-- Sort Dropdown -->
                     <select id="sortSelect" onchange="applyFiltersAndRender()" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition cursor-pointer w-full md:w-48">
                         <option value="newest">Sort: Newest First</option>
                         <option value="scoreDesc">Sort: Highest Score</option>
@@ -51,7 +43,6 @@
                         <option value="nameAsc">Sort: Name (A-Z)</option>
                     </select>
 
-                    <!-- Export Buttons -->
                     <button onclick="exportSelectedCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition shadow flex items-center justify-center whitespace-nowrap">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         Export Selected
@@ -87,13 +78,12 @@
             </div>
         </div>
 
-        <!-- Modal for viewing full submission -->
         <div id="viewModal" class="hidden fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
             <div class="bg-slate-800 border border-slate-600 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
                 <div class="p-6 border-b border-slate-700 flex justify-between items-center">
                     <div>
                         <h3 class="text-xl font-bold text-white" id="modalStudentName">Student Answers</h3>
-                        <div id="modalScoreBadge" class="mt-1"></div>
+                        <div id="modalScoreBadge" class="mt-1 flex items-center gap-3"></div>
                     </div>
                     <button onclick="closeModal()" class="text-slate-400 hover:text-white transition">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -105,7 +95,6 @@
 
     </main>
 
-    <!-- Firebase SDK Setup -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
@@ -150,19 +139,24 @@
 
                 window.rawSubmissionsData = data;
                 
-                // Track attempts by name
-                const attemptCounts = {};
-                Object.values(data).forEach(sub => {
+                const chronologicalData = Object.keys(data).map(k => ({id: k, ...data[k]}))
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                const nameTotals = {};
+                chronologicalData.forEach(sub => {
                     const normalizedName = (sub.name || "Unknown").trim().toLowerCase();
-                    attemptCounts[normalizedName] = (attemptCounts[normalizedName] || 0) + 1;
+                    nameTotals[normalizedName] = (nameTotals[normalizedName] || 0) + 1;
                 });
 
-                // Process into array for sorting/filtering
-                window.allProcessedData = Object.keys(data).map(key => {
-                    const sub = data[key];
-                    const date = new Date(sub.timestamp);
+                const nameCurrent = {};
+
+                window.allProcessedData = chronologicalData.map(sub => {
+                    const normalizedName = (sub.name || "Unknown").trim().toLowerCase();
+                    nameCurrent[normalizedName] = (nameCurrent[normalizedName] || 0) + 1;
                     
+                    const date = new Date(sub.timestamp);
                     let score = 0, totalMcq = 0;
+                    
                     if(sub.questions) {
                         sub.questions.forEach((q, i) => {
                             if(q.type === 'mcq') {
@@ -172,20 +166,18 @@
                         });
                     }
 
-                    // Parse time to seconds for sorting
                     let timeSecs = 99999; 
                     if(sub.timeTaken) {
                         const match = sub.timeTaken.match(/(\d+)m\s*(\d+)s/);
                         if(match) timeSecs = (parseInt(match[1]) * 60) + parseInt(match[2]);
                     }
 
-                    const normalizedName = (sub.name || "Unknown").trim().toLowerCase();
-
                     return {
-                        id: key,
+                        id: sub.id,
                         name: sub.name || "Unknown",
                         normalizedName: normalizedName,
-                        attempts: attemptCounts[normalizedName],
+                        currentAttempt: nameCurrent[normalizedName],
+                        totalAttempts: nameTotals[normalizedName],
                         timeTaken: sub.timeTaken || 'Unknown',
                         timeSecs: timeSecs,
                         score: score,
@@ -205,25 +197,20 @@
             const searchInput = document.getElementById('searchInput').value.toLowerCase();
             const sortType = document.getElementById('sortSelect').value;
 
-            // 1. Filter
             let filteredData = window.allProcessedData.filter(sub => 
                 sub.normalizedName.includes(searchInput)
             );
 
-            // 2. Sort
             filteredData.sort((a, b) => {
                 if(sortType === 'scoreDesc') {
-                    // Sort by score (desc), then time (asc)
                     if (b.score !== a.score) return b.score - a.score;
                     return a.timeSecs - b.timeSecs; 
                 }
                 if(sortType === 'timeAsc') return a.timeSecs - b.timeSecs;
                 if(sortType === 'nameAsc') return a.normalizedName.localeCompare(b.normalizedName);
-                // Default: newest
                 return b.timestampMs - a.timestampMs;
             });
 
-            // 3. Render
             tbody.innerHTML = '';
             
             if(filteredData.length === 0) {
@@ -237,10 +224,10 @@
                     statusBadge = `<span class="bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/20">${sub.terminationReason}</span>`;
                 }
 
-                // Attempt Badge
                 let attemptBadge = '';
-                if(sub.attempts > 1) {
-                    attemptBadge = `<span class="ml-2 bg-slate-700 text-slate-300 px-2 py-0.5 rounded text-xs border border-slate-600" title="Total attempts by this name">${sub.attempts} Attempts</span>`;
+                if(sub.totalAttempts > 1) {
+                    const bgClass = sub.currentAttempt === sub.totalAttempts ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-700 text-slate-300 border-slate-600';
+                    attemptBadge = `<span class="ml-2 ${bgClass} px-2 py-0.5 rounded text-xs border" title="Attempt ${sub.currentAttempt} of ${sub.totalAttempts}">Attempt ${sub.currentAttempt}/${sub.totalAttempts}</span>`;
                 }
 
                 const tr = document.createElement('tr');
@@ -249,7 +236,7 @@
                     <td class="p-4 text-center border-b border-slate-700/50">
                         <input type="checkbox" class="student-checkbox checkbox-custom" value="${sub.id}">
                     </td>
-                    <td class="p-4 font-medium text-slate-200 border-b border-slate-700/50">${escapeHTML(sub.name)} ${attemptBadge}</td>
+                    <td class="p-4 font-medium text-slate-200 border-b border-slate-700/50 flex items-center">${escapeHTML(sub.name)} ${attemptBadge}</td>
                     <td class="p-4 text-slate-400 border-b border-slate-700/50">${sub.timeTaken}</td>
                     <td class="p-4 font-bold text-blue-400 border-b border-slate-700/50">${sub.score} / ${sub.totalMcq}</td>
                     <td class="p-4 border-b border-slate-700/50">${statusBadge}</td>
@@ -268,11 +255,9 @@
             checkboxes.forEach(cb => cb.checked = master.checked);
         }
 
-        // --- CSV EXPORT LOGIC ---
         function downloadCSV(dataArray, filename) {
             let csvContent = "data:text/csv;charset=utf-8,";
-            // Header
-            csvContent += "Rank,Candidate Name,Score,Total MCQs,Time Taken (Secs),Time Taken (Display),Status/Reason,Total Attempts,Submitted At\n";
+            csvContent += "Rank,Candidate Name,Attempt Number,Total Attempts,Score,Total MCQs,Time Taken (Secs),Time Taken (Display),Status/Reason,Submitted At\n";
             
             dataArray.forEach((row, index) => {
                 let safeName = `"${String(row.name).replace(/"/g, '""')}"`;
@@ -280,7 +265,7 @@
                 let safeTimeStr = `"${String(row.timeString).replace(/"/g, '""')}"`;
                 let safeTimeTaken = `"${String(row.timeTaken).replace(/"/g, '""')}"`;
                 
-                csvContent += `${index + 1},${safeName},${row.score},${row.totalMcq},${row.timeSecs},${safeTimeTaken},${safeReason},${row.attempts},${safeTimeStr}\n`;
+                csvContent += `${index + 1},${safeName},${row.currentAttempt},${row.totalAttempts},${row.score},${row.totalMcq},${row.timeSecs},${safeTimeTaken},${safeReason},${safeTimeStr}\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
@@ -295,7 +280,6 @@
         window.exportAllCSV = function() {
             if(window.allProcessedData.length === 0) return alert("No data to export.");
             
-            // Create a deeply sorted copy for the CSV (Ranked: Score Desc -> Time Asc)
             let rankedData = [...window.allProcessedData].sort((a, b) => {
                 if (b.score !== a.score) return b.score - a.score;
                 return a.timeSecs - b.timeSecs; 
@@ -310,7 +294,6 @@
 
             const selectedIds = Array.from(checkboxes).map(cb => cb.value);
             
-            // Filter and sort the selected data (Score Desc -> Time Asc)
             let selectedData = window.allProcessedData
                 .filter(sub => selectedIds.includes(sub.id))
                 .sort((a, b) => {
@@ -321,10 +304,10 @@
             downloadCSV(selectedData, `Optenix_Passed_Candidates_${new Date().toISOString().split('T')[0]}.csv`);
         }
 
-        // --- MODAL LOGIC ---
         window.viewSubmission = function(id) {
             const rawData = window.rawSubmissionsData[id];
-            if(!rawData) return;
+            const processed = window.allProcessedData.find(p => p.id === id);
+            if(!rawData || !processed) return;
 
             document.getElementById('modalStudentName').innerText = `${escapeHTML(rawData.name)}'s Assessment`;
             const contentDiv = document.getElementById('modalContent');
@@ -366,7 +349,14 @@
                 contentDiv.appendChild(qBlock);
             });
 
-            document.getElementById('modalScoreBadge').innerHTML = `<span class="text-sm text-slate-400">Auto-Graded MCQ Score: <span class="text-blue-400 font-bold text-lg">${score}/${totalMcq}</span></span>`;
+            const attemptStr = processed.totalAttempts > 1 
+                ? `<span class="text-sm text-slate-300 bg-slate-700 px-3 py-1 rounded-full border border-slate-600">Attempt ${processed.currentAttempt} of ${processed.totalAttempts}</span>` 
+                : '';
+
+            document.getElementById('modalScoreBadge').innerHTML = `
+                <span class="text-sm text-slate-400">Auto-Graded MCQ Score: <span class="text-blue-400 font-bold text-lg">${score}/${totalMcq}</span></span>
+                ${attemptStr}
+            `;
             document.getElementById('viewModal').classList.remove('hidden');
         }
 
