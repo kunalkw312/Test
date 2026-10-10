@@ -7,11 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        /* Scrollbar styling */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .checkbox-custom { width: 1.25rem; height: 1.25rem; accent-color: #3b82f6; cursor: pointer; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -21,26 +21,45 @@
         <div class="text-slate-300 font-medium">Admin Dashboard | Live Submissions</div>
     </header>
 
-    
-
     <!-- Main Container -->
     <main class="flex-grow p-6 max-w-7xl mx-auto w-full">
         
         <!-- Live Submissions Table -->
         <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
-            <div class="p-6 border-b border-slate-700 flex flex-col md:flex-row justify-between items-center gap-4">
-                <h2 class="text-xl font-bold text-white flex items-center">
+            
+            <!-- Controls Top Bar -->
+            <div class="p-6 border-b border-slate-700 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-slate-800/50">
+                <h2 class="text-xl font-bold text-white flex items-center whitespace-nowrap">
                     <span class="w-3 h-3 bg-red-500 rounded-full mr-3 animate-pulse"></span>
                     Live Submissions
                 </h2>
                 
-                <div class="w-full md:w-1/3 relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                <div class="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+                    <!-- Search Bar -->
+                    <div class="relative w-full md:w-64">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <input type="text" id="searchInput" onkeyup="applyFiltersAndRender()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition" placeholder="Search name...">
                     </div>
-                    <input type="text" id="searchInput" onkeyup="filterSubmissions()" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:border-blue-500 transition" placeholder="Search by student name...">
+
+                    <!-- Sort Dropdown -->
+                    <select id="sortSelect" onchange="applyFiltersAndRender()" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition cursor-pointer w-full md:w-48">
+                        <option value="newest">Sort: Newest First</option>
+                        <option value="scoreDesc">Sort: Highest Score</option>
+                        <option value="timeAsc">Sort: Fastest Time</option>
+                        <option value="nameAsc">Sort: Name (A-Z)</option>
+                    </select>
+
+                    <!-- Export Buttons -->
+                    <button onclick="exportSelectedCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition shadow flex items-center justify-center whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Export Selected
+                    </button>
+                    <button onclick="exportAllCSV()" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition shadow flex items-center justify-center whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export Ranked All
+                    </button>
                 </div>
             </div>
             
@@ -48,6 +67,9 @@
                 <table class="w-full text-left border-collapse" id="submissionsTable">
                     <thead>
                         <tr class="bg-slate-900 text-slate-400 text-sm uppercase tracking-wider">
+                            <th class="p-4 border-b border-slate-700 w-12 text-center">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes()" class="checkbox-custom">
+                            </th>
                             <th class="p-4 border-b border-slate-700 font-medium">Candidate Name</th>
                             <th class="p-4 border-b border-slate-700 font-medium">Time Taken</th>
                             <th class="p-4 border-b border-slate-700 font-medium">MCQ Score</th>
@@ -58,7 +80,7 @@
                     </thead>
                     <tbody id="submissionsTableBody" class="divide-y divide-slate-700/50 text-sm">
                         <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-500 italic">Waiting for submissions...</td>
+                            <td colspan="7" class="p-8 text-center text-slate-500 italic">Waiting for submissions...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -77,9 +99,7 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <div class="p-6 overflow-y-auto flex-grow" id="modalContent">
-                    <!-- Dynamic content injected here -->
-                </div>
+                <div class="p-6 overflow-y-auto flex-grow" id="modalContent"></div>
             </div>
         </div>
 
@@ -104,11 +124,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        let allSubmissionsData = {};
+        
+        window.allProcessedData = []; 
+        window.rawSubmissionsData = {};
 
         function escapeHTML(str) {
             if(!str) return "";
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         signInAnonymously(auth).then(() => {
@@ -121,33 +143,26 @@
             const submissionsRef = ref(db, 'submissions');
             onValue(submissionsRef, (snapshot) => {
                 const data = snapshot.val();
-                const tbody = document.getElementById('submissionsTableBody');
-                
                 if (!data) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500 italic">No submissions yet.</td></tr>';
+                    document.getElementById('submissionsTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500 italic">No submissions yet.</td></tr>';
                     return;
                 }
 
-                allSubmissionsData = data;
-                tbody.innerHTML = '';
+                window.rawSubmissionsData = data;
                 
-                const submissionsArray = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                // Track attempts by name
+                const attemptCounts = {};
+                Object.values(data).forEach(sub => {
+                    const normalizedName = (sub.name || "Unknown").trim().toLowerCase();
+                    attemptCounts[normalizedName] = (attemptCounts[normalizedName] || 0) + 1;
+                });
 
-                submissionsArray.forEach(sub => {
+                // Process into array for sorting/filtering
+                window.allProcessedData = Object.keys(data).map(key => {
+                    const sub = data[key];
                     const date = new Date(sub.timestamp);
-                    const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     
-                    let statusBadge = `<span class="bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-xs font-medium border border-green-500/20">${sub.terminationReason}</span>`;
-                    if (sub.terminationReason !== 'Manual Submission') {
-                        statusBadge = `<span class="bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/20">${sub.terminationReason}</span>`;
-                    }
-
-                    // Calculate Quick Score
-                    let score = 0;
-                    let totalMcq = 0;
+                    let score = 0, totalMcq = 0;
                     if(sub.questions) {
                         sub.questions.forEach((q, i) => {
                             if(q.type === 'mcq') {
@@ -157,44 +172,172 @@
                         });
                     }
 
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-800/50 transition student-row";
-                    tr.innerHTML = `
-                        <td class="p-4 font-medium text-slate-200 student-name">${escapeHTML(sub.name)}</td>
-                        <td class="p-4 text-slate-400">${sub.timeTaken || 'Unknown'}</td>
-                        <td class="p-4 font-bold text-blue-400">${score} / ${totalMcq}</td>
-                        <td class="p-4">${statusBadge}</td>
-                        <td class="p-4 text-slate-400 text-xs">${timeString}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="viewSubmission('${sub.id}')" class="text-blue-400 hover:text-blue-300 font-medium text-sm transition">Review</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
+                    // Parse time to seconds for sorting
+                    let timeSecs = 99999; 
+                    if(sub.timeTaken) {
+                        const match = sub.timeTaken.match(/(\d+)m\s*(\d+)s/);
+                        if(match) timeSecs = (parseInt(match[1]) * 60) + parseInt(match[2]);
+                    }
+
+                    const normalizedName = (sub.name || "Unknown").trim().toLowerCase();
+
+                    return {
+                        id: key,
+                        name: sub.name || "Unknown",
+                        normalizedName: normalizedName,
+                        attempts: attemptCounts[normalizedName],
+                        timeTaken: sub.timeTaken || 'Unknown',
+                        timeSecs: timeSecs,
+                        score: score,
+                        totalMcq: totalMcq,
+                        terminationReason: sub.terminationReason,
+                        timestampMs: date.getTime(),
+                        timeString: date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    };
                 });
-                
-                window.filterSubmissions();
+
+                applyFiltersAndRender();
             });
         }
 
-        window.viewSubmission = function(id) {
-            const data = allSubmissionsData[id];
-            if(!data) return;
+        window.applyFiltersAndRender = function() {
+            const tbody = document.getElementById('submissionsTableBody');
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const sortType = document.getElementById('sortSelect').value;
 
-            document.getElementById('modalStudentName').innerText = `${escapeHTML(data.name)}'s Assessment`;
+            // 1. Filter
+            let filteredData = window.allProcessedData.filter(sub => 
+                sub.normalizedName.includes(searchInput)
+            );
+
+            // 2. Sort
+            filteredData.sort((a, b) => {
+                if(sortType === 'scoreDesc') {
+                    // Sort by score (desc), then time (asc)
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.timeSecs - b.timeSecs; 
+                }
+                if(sortType === 'timeAsc') return a.timeSecs - b.timeSecs;
+                if(sortType === 'nameAsc') return a.normalizedName.localeCompare(b.normalizedName);
+                // Default: newest
+                return b.timestampMs - a.timestampMs;
+            });
+
+            // 3. Render
+            tbody.innerHTML = '';
+            
+            if(filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500 italic">No matches found.</td></tr>';
+                return;
+            }
+
+            filteredData.forEach(sub => {
+                let statusBadge = `<span class="bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-xs font-medium border border-green-500/20">${sub.terminationReason}</span>`;
+                if (sub.terminationReason !== 'Manual Submission') {
+                    statusBadge = `<span class="bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/20">${sub.terminationReason}</span>`;
+                }
+
+                // Attempt Badge
+                let attemptBadge = '';
+                if(sub.attempts > 1) {
+                    attemptBadge = `<span class="ml-2 bg-slate-700 text-slate-300 px-2 py-0.5 rounded text-xs border border-slate-600" title="Total attempts by this name">${sub.attempts} Attempts</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 text-center border-b border-slate-700/50">
+                        <input type="checkbox" class="student-checkbox checkbox-custom" value="${sub.id}">
+                    </td>
+                    <td class="p-4 font-medium text-slate-200 border-b border-slate-700/50">${escapeHTML(sub.name)} ${attemptBadge}</td>
+                    <td class="p-4 text-slate-400 border-b border-slate-700/50">${sub.timeTaken}</td>
+                    <td class="p-4 font-bold text-blue-400 border-b border-slate-700/50">${sub.score} / ${sub.totalMcq}</td>
+                    <td class="p-4 border-b border-slate-700/50">${statusBadge}</td>
+                    <td class="p-4 text-slate-400 text-xs border-b border-slate-700/50">${sub.timeString}</td>
+                    <td class="p-4 text-right border-b border-slate-700/50">
+                        <button onclick="viewSubmission('${sub.id}')" class="text-blue-400 hover:text-blue-300 font-medium text-sm transition">Review</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.toggleAllCheckboxes = function() {
+            const master = document.getElementById('selectAllCheckbox');
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+        }
+
+        // --- CSV EXPORT LOGIC ---
+        function downloadCSV(dataArray, filename) {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // Header
+            csvContent += "Rank,Candidate Name,Score,Total MCQs,Time Taken (Secs),Time Taken (Display),Status/Reason,Total Attempts,Submitted At\n";
+            
+            dataArray.forEach((row, index) => {
+                let safeName = `"${String(row.name).replace(/"/g, '""')}"`;
+                let safeReason = `"${String(row.terminationReason).replace(/"/g, '""')}"`;
+                let safeTimeStr = `"${String(row.timeString).replace(/"/g, '""')}"`;
+                let safeTimeTaken = `"${String(row.timeTaken).replace(/"/g, '""')}"`;
+                
+                csvContent += `${index + 1},${safeName},${row.score},${row.totalMcq},${row.timeSecs},${safeTimeTaken},${safeReason},${row.attempts},${safeTimeStr}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.exportAllCSV = function() {
+            if(window.allProcessedData.length === 0) return alert("No data to export.");
+            
+            // Create a deeply sorted copy for the CSV (Ranked: Score Desc -> Time Asc)
+            let rankedData = [...window.allProcessedData].sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.timeSecs - b.timeSecs; 
+            });
+
+            downloadCSV(rankedData, `Optenix_All_Submissions_Ranked_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        window.exportSelectedCSV = function() {
+            const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+            if(checkboxes.length === 0) return alert("Please select at least one candidate using the checkboxes.");
+
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            // Filter and sort the selected data (Score Desc -> Time Asc)
+            let selectedData = window.allProcessedData
+                .filter(sub => selectedIds.includes(sub.id))
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return a.timeSecs - b.timeSecs; 
+                });
+
+            downloadCSV(selectedData, `Optenix_Passed_Candidates_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        // --- MODAL LOGIC ---
+        window.viewSubmission = function(id) {
+            const rawData = window.rawSubmissionsData[id];
+            if(!rawData) return;
+
+            document.getElementById('modalStudentName').innerText = `${escapeHTML(rawData.name)}'s Assessment`;
             const contentDiv = document.getElementById('modalContent');
             contentDiv.innerHTML = '';
 
-            let score = 0;
-            let totalMcq = 0;
+            let score = 0, totalMcq = 0;
 
-            data.questions.forEach((q, index) => {
-                const answer = data.answers && data.answers[index] ? data.answers[index] : 'No answer provided';
-                
+            rawData.questions.forEach((q, index) => {
+                const answer = rawData.answers && rawData.answers[index] ? rawData.answers[index] : 'No answer provided';
                 const qBlock = document.createElement('div');
                 qBlock.className = "mb-6 bg-slate-900 rounded p-4 border border-slate-700";
                 
-                let evaluationHtml = '';
-                let answerHtml = '';
+                let evaluationHtml = '', answerHtml = '';
 
                 if (q.type === 'mcq') {
                     totalMcq++;
@@ -205,32 +348,21 @@
                         ? `<span class="ml-3 bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Correct</span>`
                         : `<span class="ml-3 bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Incorrect</span>`;
                     
-                    const correctAnswerHtml = !isCorrect 
-                        ? `<div class="mt-1 text-xs text-green-400">Correct Answer: ${escapeHTML(q.correct)}</div>` 
-                        : '';
-
+                    const correctAnswerHtml = !isCorrect ? `<div class="mt-1 text-xs text-green-400">Correct Answer: ${escapeHTML(q.correct)}</div>` : '';
                     answerHtml = `<div class="mt-3 p-3 bg-slate-800 rounded border ${isCorrect ? 'border-green-500/30' : 'border-red-500/30'} text-slate-300 text-sm">
-                                    Candidate's Answer: <span class="text-white font-medium">${escapeHTML(answer)}</span>
-                                    ${correctAnswerHtml}
+                                    Candidate's Answer: <span class="text-white font-medium">${escapeHTML(answer)}</span>${correctAnswerHtml}
                                   </div>`;
-                    
                     evaluationHtml = `<div class="text-sm text-slate-400 mb-2 flex items-center">Question ${index + 1} (MCQ) ${badgeHtml}</div>`;
                 } else {
                     const badgeHtml = `<span class="ml-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Manual Review</span>`;
-                    
                     answerHtml = `<div class="mt-3">
                                     <div class="text-xs text-slate-400 mb-1 uppercase font-bold tracking-wider">Candidate's Code:</div>
                                     <pre class="bg-black p-4 rounded-lg text-green-400 text-sm overflow-x-auto border border-slate-800 font-mono shadow-inner"><code>${escapeHTML(answer)}</code></pre>
                                   </div>`;
-                    
                     evaluationHtml = `<div class="text-sm text-slate-400 mb-2 flex items-center">Question ${index + 1} (CODING) ${badgeHtml}</div>`;
                 }
 
-                qBlock.innerHTML = `
-                    ${evaluationHtml}
-                    <div class="text-white font-medium text-lg leading-relaxed">${escapeHTML(q.q)}</div>
-                    ${answerHtml}
-                `;
+                qBlock.innerHTML = `${evaluationHtml}<div class="text-white font-medium text-lg leading-relaxed">${escapeHTML(q.q)}</div>${answerHtml}`;
                 contentDiv.appendChild(qBlock);
             });
 
@@ -240,23 +372,6 @@
 
         window.closeModal = function() {
             document.getElementById('viewModal').classList.add('hidden');
-        }
-
-        window.filterSubmissions = function() {
-            const input = document.getElementById('searchInput').value.toUpperCase();
-            const rows = document.querySelectorAll('.student-row');
-            
-            rows.forEach(row => {
-                const nameCell = row.querySelector('.student-name');
-                if (nameCell) {
-                    const txtValue = nameCell.textContent || nameCell.innerText;
-                    if (txtValue.toUpperCase().indexOf(input) > -1) {
-                        row.style.display = "";
-                    } else {
-                        row.style.display = "none";
-                    }
-                }
-            });
         }
     </script>
 </body>
